@@ -42,14 +42,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get the entry function
     const entry = await getEntry();
 
-    // Construct the full URL
+    // In Vercel serverless functions, req.url should be the pathname
+    // Handle cases where it might be a full URL or just a path
+    let pathname = req.url || '/';
+    
+    // Remove any hostname that might be incorrectly included in the path
+    // This can happen if the URL is malformed
+    if (pathname.includes('://')) {
+      try {
+        const url = new URL(pathname);
+        pathname = url.pathname + url.search;
+      } catch {
+        // If URL parsing fails, try to extract path manually
+        const match = pathname.match(/^https?:\/\/[^\/]+(\/.*)$/);
+        if (match) {
+          pathname = match[1];
+        }
+      }
+    }
+    
+    // Clean up any remaining hostname artifacts in the path
+    // Remove patterns like "/domain.com/path" or "/ecosense.up.railway.app/path" -> "/path"
+    // This handles cases where the domain might be incorrectly included in the pathname
+    pathname = pathname.replace(/^\/[^\/]+(\.[^\/]+)*(\/.*)$/, '$2');
+    
+    // If the replacement didn't match, try a more specific pattern for Railway domains
+    if (pathname.includes('.railway.app') || pathname.includes('.up.railway.app')) {
+      const match = pathname.match(/\/[^\/]+\.(up\.)?railway\.app(\/.*)$/);
+      if (match) {
+        pathname = match[2] || '/';
+      }
+    }
+    
+    // Ensure pathname starts with /
+    if (!pathname.startsWith('/')) {
+      pathname = '/' + pathname;
+    }
+
+    // Construct the full URL for the Request object
     const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.headers.host;
-    const url = new URL(req.url || '/', `${protocol}://${host}`);
+    const host = req.headers.host || 'localhost';
+    const fullUrl = `${protocol}://${host}${pathname}`;
+    
+    // Debug logging (remove in production if needed)
+    console.log('Request URL:', req.url);
+    console.log('Extracted pathname:', pathname);
+    console.log('Full URL:', fullUrl);
     
     // Create a Request object from Vercel's req
-    const request = new Request(url, {
-      method: req.method,
+    const request = new Request(fullUrl, {
+      method: req.method || 'GET',
       headers: new Headers(req.headers as Record<string, string>),
       body: req.method !== "GET" && req.method !== "HEAD" && req.body 
         ? (typeof req.body === 'string' ? req.body : JSON.stringify(req.body))
