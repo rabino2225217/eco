@@ -1,87 +1,52 @@
-# Welcome to React Router!
+# EcoSense Deployment
 
-A modern, production-ready template for building full-stack React applications using React Router.
+This repository now ships with containerized services for the React frontend, Express API server, Python model service, and MongoDB. Follow the instructions below to build, run, and scan the stack.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Prerequisites
+- Docker Desktop 4.0+ (or compatible Docker Engine + Compose v2)
+- Node.js 20+ (optional, for local development outside containers)
+- Git LFS if you plan to update the model weights
 
-## Features
+## Configuration
+1. Copy `env.sample` to `.env` in the repository root:
+   ```bash
+   cp env.sample .env
+   ```
+2. Edit the `.env` file as needed. Key values:
+   - `FRONTEND_PORT`: external port for the React app (defaults to `5173`).
+   - `SERVER_PORT`: API port (defaults to `4000`).
+   - `MODEL_PORT`: Flask model service port (defaults to `5001`).
+   - `CLIENT_ORIGIN`: comma-separated list of allowed browser origins for CORS.
+   - `SESSION_SECRET`, `MONGODB_URI`, and any satellite/model endpoints you integrate.
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
-
+## Build & Run
 ```bash
-npm install
+docker compose up --build
 ```
 
-### Development
+Services and default ports:
+- Frontend: http://localhost:5173
+- API server: http://localhost:4000
+- Model service: http://localhost:5001
+- MongoDB: mongodb://localhost:27017 (exposed for local tooling)
 
-Start the development server with HMR:
-
+To stop everything:
 ```bash
-npm run dev
+docker compose down
 ```
 
-Your application will be available at `http://localhost:5173`.
+## Deployment Scan
+1. Build images locally (as above) or via your CI pipeline.
+2. Run your preferred scanner (e.g., Trivy) per image:
+   ```bash
+   trivy image ecosense-frontend:latest
+   trivy image ecosense-server:latest
+   trivy image ecosense-model:latest
+   ```
+3. Address any reported CVEs, then push the images to your registry of choice for deployment (ECS, AKS, GKE, etc.).
 
-## Building for Production
+## Notes
+- The Express server now accepts `CLIENT_ORIGIN` to align CORS with your deployed frontend URL(s).
+- The frontend build embeds `VITE_API_URL` at build-time. Update the `.env` value before running `docker compose build` if your API base URL differs.
+- Model weights live under `model/models`. They are mounted into the container so you can update them without rebuilding the image.
 
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
