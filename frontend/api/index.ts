@@ -22,11 +22,23 @@ let entryModule: { entry: (request: Request, init?: ResponseInit) => Promise<Res
 async function getEntry() {
   if (!entryModule) {
     try {
+      // In Vercel, serverless functions run from the root directory (frontend)
+      // The build output is at build/server/index.js relative to the root
+      // Since api/index.ts is at frontend/api/index.ts, we need to go up one level
+      // @ts-expect-error - Build output is JS, not TS
       entryModule = await import("../build/server/index.js");
     } catch (importError) {
       console.error("Failed to import server module:", importError);
       console.error("Import error stack:", importError instanceof Error ? importError.stack : String(importError));
-      throw new Error(`Cannot load server module: ${importError instanceof Error ? importError.message : String(importError)}. Make sure the build completed successfully.`);
+      console.error("Current working directory:", process.cwd());
+      console.error("Attempted path: ../build/server/index.js");
+      // Try alternative path - from root directory perspective
+      try {
+        // @ts-expect-error - Build output is JS, not TS
+        entryModule = await import("./build/server/index.js");
+      } catch (fallbackError) {
+        throw new Error(`Cannot load server module: ${importError instanceof Error ? importError.message : String(importError)}. Fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}. Make sure the build completed successfully.`);
+      }
     }
   }
   
