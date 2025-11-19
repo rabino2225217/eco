@@ -5,7 +5,8 @@
   "outputDirectory": "build/client",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "build/**"
+      "memory": 1024,
+      "maxDuration": 30
     }
   },
   "rewrites": [
