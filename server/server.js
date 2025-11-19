@@ -12,6 +12,7 @@ const { Server } = require('socket.io');
 const sharedSession = require("express-socket.io-session");
 
 const app = express();
+app.set("trust proxy", 1);
 
 //Load ENV variables
 const host = process.env.HOST || "0.0.0.0";
@@ -39,15 +40,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(compression());
 
 //Session config
+const isProduction = process.env.NODE_ENV === "production";
+
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: mongodb }),
   cookie: {
-    secure: false,
+    secure: isProduction,
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24, 
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 1000 * 60 * 60 * 24,
   },
 });
 
